@@ -1630,3 +1630,26 @@ img {
     font-size: 15px;
   }
 }
+@media (max-width: 600px) {
+
+  /* Live counter */
+  .live-counter {
+    width: calc(100% - 40px);
+    margin: 20px auto;
+    padding: 18px 16px;
+    border-radius: 28px;
+    box-sizing: border-box;
+  }
+
+  .live-counter .count {
+    font-size: 32px;
+    line-height: 1.1;
+    letter-spacing: 1px;
+  }
+
+  .live-counter .label {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-top: 8px;
+  }
+}
