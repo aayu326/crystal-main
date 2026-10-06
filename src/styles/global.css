@@ -1507,3 +1507,126 @@ img {
 .portrait-camera-trigger .upload-overlay {
   pointer-events: none;
 }
+/* =========================================
+   MOBILE RESPONSIVE FIX
+   ========================================= */
+
+@media (max-width: 600px) {
+
+  /* Main page spacing */
+  body {
+    overflow-x: hidden;
+  }
+
+  .portrait-empty-wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* Poster */
+  .portrait-empty-wrap .portrait-canvas {
+    width: min(280px, calc(100vw - 90px)) !important;
+    height: auto !important;
+    max-width: 100%;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* Text below poster */
+  .upload-overlay {
+    position: static;
+    width: 100%;
+    text-align: center;
+    margin-top: 18px;
+  }
+
+  .upload-overlay p {
+    margin: 6px 0;
+  }
+
+  .upload-overlay .upload-hint {
+    font-size: 15px;
+    line-height: 1.45;
+    padding: 0 20px;
+  }
+
+  /* Gallery + Camera */
+  .photo-uploader {
+    width: 100%;
+    margin-top: 18px;
+  }
+
+  .uploader-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+
+  .uploader-buttons .chip-btn {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 16px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+
+  .uploader-buttons .chip-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Step card */
+  .step-card,
+  .portrait-card,
+  .form-card {
+    width: calc(100% - 24px);
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+
+  /* General mobile typography */
+  h1 {
+    font-size: clamp(32px, 9vw, 46px);
+    line-height: 1.08;
+  }
+
+  h2 {
+    font-size: clamp(26px, 7vw, 36px);
+  }
+
+  p {
+    line-height: 1.5;
+  }
+}
+
+
+/* Smaller phones */
+@media (max-width: 390px) {
+
+  .portrait-empty-wrap .portrait-canvas {
+    width: min(260px, calc(100vw - 85px)) !important;
+  }
+
+  .upload-overlay .upload-hint {
+    font-size: 14px;
+  }
+
+  .uploader-buttons {
+    padding: 0 14px;
+  }
+
+  .uploader-buttons .chip-btn {
+    min-height: 46px;
+    font-size: 15px;
+  }
+}

@@ -376,12 +376,12 @@ await saveSubmission({
     onClick={() => photoUploaderRef.current?.openCamera()}
     aria-label="Open camera"
   >
-    <PortraitTemplate
-      img={null}
-      transform={transform}
-      lang={lang}
-      displayWidth={300}
-    />
+  <PortraitTemplate
+  img={null}
+  transform={transform}
+  lang={lang}
+  displayWidth={280}
+/>
 
     <div className="upload-overlay">
       <p>{tr('addPhoto')}</p>
