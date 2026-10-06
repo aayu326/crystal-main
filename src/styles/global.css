@@ -1226,3 +1226,284 @@ img {
   70% { box-shadow: 0 0 0 9px rgba(53, 208, 127, 0); }
   100% { box-shadow: 0 0 0 0 rgba(53, 208, 127, 0); }
 }
+/* =========================================================
+   CRYSTAL DIWALI - 2 STEP CAMPAIGN FLOW
+   ========================================================= */
+
+.campaign-flow {
+  display: block;
+  max-width: 900px;
+  padding-top: 18px;
+}
+
+.campaign-flow .hero-copy {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  align-items: center;
+  text-align: center;
+}
+
+.campaign-flow .hero-copy h1 {
+  max-width: 18ch;
+}
+
+.campaign-flow .subhead {
+  max-width: 620px;
+}
+
+.campaign-flow .live-counter {
+  align-self: center;
+}
+
+/* ---------------- Step Card ---------------- */
+
+.step-card,
+.step-form-card {
+  width: min(100%, 520px);
+  max-width: 520px;
+  margin: 8px auto 0;
+}
+
+.step-card {
+  text-align: left;
+}
+
+.step-form-card {
+  color: var(--ink-900);
+  text-align: left;
+}
+
+/* ---------------- Step Progress ---------------- */
+
+.step-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.step-progress-active,
+.step-progress-inactive,
+.step-progress-complete {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.step-progress-active {
+  background: var(--red-600);
+  color: #fff;
+}
+
+.step-progress-complete {
+  background: #1f9d55;
+  color: #fff;
+}
+
+.step-progress-inactive {
+  background: #e7dfd4;
+  color: #766d65;
+}
+
+.step-progress-line {
+  width: 70px;
+  height: 2px;
+  background: #ded3c7;
+}
+
+.step-progress-line.complete {
+  background: #1f9d55;
+}
+
+.step-label {
+  text-align: center;
+}
+
+.portrait-card-title,
+.details-title {
+  text-align: center;
+}
+
+/* ---------------- Photo step ---------------- */
+
+.portrait-empty-wrap {
+  max-width: 300px;
+}
+
+.portrait-editor-wrap {
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.step-next-btn {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.upload-overlay {
+  text-align: center;
+}
+
+/* ---------------- Form step ---------------- */
+
+.step-form-card {
+  padding: clamp(20px, 3vw, 30px);
+}
+
+.details-title {
+  color: var(--ink-900);
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 27px;
+  margin: 0 0 20px;
+}
+
+.form-step-actions {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.back-step-btn {
+  min-height: 50px;
+}
+
+.form-step-actions .primary-btn {
+  min-height: 50px;
+}
+
+/* ---------------- Desktop viewport optimization ---------------- */
+
+@media (min-width: 961px) {
+  .campaign-flow {
+    min-height: auto;
+    padding-bottom: 35px;
+  }
+
+  .campaign-flow .hero-copy {
+    gap: 9px;
+  }
+
+  .campaign-flow .hero-copy h1 {
+    font-size: clamp(38px, 4vw, 54px);
+  }
+
+  .campaign-flow .subhead {
+    margin-bottom: 4px;
+  }
+
+  .step-card,
+  .step-form-card {
+    margin-top: 4px;
+  }
+}
+
+/* ---------------- Tablet ---------------- */
+
+@media (max-width: 960px) {
+  .campaign-flow {
+    padding-bottom: 35px;
+  }
+
+  .campaign-flow .hero-copy {
+    width: 100%;
+  }
+}
+
+/* ---------------- Mobile ---------------- */
+
+@media (max-width: 600px) {
+  .campaign-flow {
+    padding: 12px 14px 28px;
+  }
+
+  .campaign-flow .hero-copy {
+    gap: 8px;
+  }
+
+  .campaign-flow .hero-copy h1 {
+    font-size: clamp(30px, 8vw, 40px);
+  }
+
+  .step-card,
+  .step-form-card {
+    width: 100%;
+    max-width: 420px;
+    margin-top: 5px;
+  }
+
+  .step-card {
+    padding: 14px;
+  }
+
+  .step-form-card {
+    padding: 17px;
+  }
+
+  .step-progress-line {
+    width: 45px;
+  }
+
+  .details-title {
+    font-size: 23px;
+    margin-bottom: 16px;
+  }
+
+  .form-step-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .back-step-btn {
+    order: 2;
+  }
+
+  .form-step-actions .primary-btn {
+    order: 1;
+  }
+}
+
+/* ---------------- Small phones ---------------- */
+
+@media (max-width: 380px) {
+  .campaign-flow {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .step-card,
+  .step-form-card {
+    padding: 13px;
+  }
+
+  .step-progress-line {
+    width: 35px;
+  }
+}
+.portrait-camera-trigger {
+  position: relative;
+  display: block;
+  width: 300px;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.portrait-camera-trigger canvas {
+  display: block;
+}
+
+.portrait-camera-trigger .upload-overlay {
+  pointer-events: none;
+}

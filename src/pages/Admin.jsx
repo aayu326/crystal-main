@@ -1,172 +1,684 @@
 import { useEffect, useMemo, useState } from 'react';
 import JSZip from 'jszip';
-import { fetchAdminData, subscribeToRealtimeUpdates } from '../services/supabase.js';
-import { getStateOptions, getStateLabel } from '../data/indiaLocations.js';
-import { LANGUAGES, t } from '../data/translations.js';
+import * as XLSX from 'xlsx';
 
-const ADMIN_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE || 'crystal2026';
-const SESSION_KEY = 'crystal_diwali_admin_unlocked';
+import {
+  fetchAdminData,
+  subscribeToRealtimeUpdates,
+  supabase,
+} from '../services/supabase.js';
+
+const ADMIN_PASSCODE =
+  import.meta.env.VITE_ADMIN_PASSCODE || 'crystal2026';
+
+const SESSION_KEY =
+  'crystal_diwali_admin_unlocked';
+
 const PAGE_SIZE = 15;
 
-function toCsvValue(v) {
-  const str = String(v ?? '');
-  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+const STORAGE_BUCKET = 'posters';
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getRefNo(row) {
+  return (
+    row.generated_poster_path
+      ?.split('/')
+      .pop()
+      ?.replace(/\.[^/.]+$/, '') ||
+    row.id?.slice(0, 8) ||
+    'N/A'
+  );
 }
 
-function downloadCsv(rows) {
-  const header = ['Ref No', 'Name', 'Mobile', 'State', 'District', 'Used Before', 'Language', 'Created At'];
-  const lines = [header.join(',')];
-  rows.forEach((r) => {
-    lines.push(
-      [
-        r.ref_no || '',
-        r.name,
-        r.mobile,
-        getStateLabel(r.state, 'en'),
-        r.district,
-        r.used_crystal_products ? 'Yes' : 'No',
-        r.language,
-        r.created_at,
-      ]
-        .map(toCsvValue)
-        .join(',')
+function formatDate(date) {
+  if (!date) return '—';
+
+  return new Date(date).toLocaleString(
+    'en-IN',
+    {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }
+  );
+}
+
+function isToday(dateStr) {
+  if (!dateStr) return false;
+
+  const date = new Date(dateStr);
+  const now = new Date();
+
+  return (
+    date.toDateString() ===
+    now.toDateString()
+  );
+}
+
+/* =========================================================
+   EXCEL EXPORT
+========================================================= */
+
+function prepareExcelRows(rows) {
+  return rows.map((row) => ({
+    'Ref No': getRefNo(row),
+    Name: row.name || '',
+    Mobile: row.phone || '',
+    State: row.state || '',
+    District:
+      row.district ||
+      row.city ||
+      '',
+    Language:
+      row.language || '',
+    Template:
+      row.template_id || '',
+    Status:
+      row.status || '',
+    'Poster Path':
+      row.generated_poster_path ||
+      '',
+    'Created At':
+      row.created_at
+        ? formatDate(row.created_at)
+        : '',
+  }));
+}
+
+function autoSizeColumns(
+  worksheet,
+  rows
+) {
+  if (!rows.length) return;
+
+  const headers =
+    Object.keys(rows[0]);
+
+  worksheet['!cols'] =
+    headers.map((header) => {
+      let maxLength =
+        header.length;
+
+      rows.forEach((row) => {
+        const value =
+          row[header] == null
+            ? ''
+            : String(row[header]);
+
+        maxLength = Math.max(
+          maxLength,
+          value.length
+        );
+      });
+
+      return {
+        wch: Math.min(
+          Math.max(maxLength + 2, 12),
+          40
+        ),
+      };
+    });
+}
+
+function addDataSheet(
+  workbook,
+  rows,
+  sheetName
+) {
+  const excelRows =
+    prepareExcelRows(rows);
+
+  const worksheet =
+    XLSX.utils.json_to_sheet(
+      excelRows
     );
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `crystal-diwali-registrations-${Date.now()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-async function downloadGeneratedImages(portraits, setProgress) {
-  const images = portraits.filter((p) => p.generated_image_url);
 
-  if (!images.length) {
-    alert('No generated images available to export.');
+  autoSizeColumns(
+    worksheet,
+    excelRows
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    sheetName.slice(0, 31)
+  );
+}
+
+function addSummarySheet(
+  workbook,
+  rows,
+  type
+) {
+  const counts = {};
+
+  rows.forEach((row) => {
+    const key =
+      type === 'state'
+        ? row.state ||
+          'Unknown'
+        : row.district ||
+          row.city ||
+          'Unknown';
+
+    counts[key] =
+      (counts[key] || 0) + 1;
+  });
+
+  const summaryRows =
+    Object.entries(counts)
+      .map(
+        ([location, count]) => ({
+          [type === 'state'
+            ? 'State'
+            : 'District']: location,
+          'Total Submissions':
+            count,
+        })
+      )
+      .sort(
+        (a, b) =>
+          b['Total Submissions'] -
+          a['Total Submissions']
+      );
+
+  const worksheet =
+    XLSX.utils.json_to_sheet(
+      summaryRows
+    );
+
+  autoSizeColumns(
+    worksheet,
+    summaryRows
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    type === 'state'
+      ? 'State Summary'
+      : 'District Summary'
+  );
+}
+
+function exportExcel(
+  rows,
+  fileName = 'crystal-diwali-submissions'
+) {
+  if (!rows.length) {
+    alert(
+      'No submissions available for export.'
+    );
     return;
   }
 
-  const zip = new JSZip();
-  const folder = zip.folder('generated');
+  const workbook =
+    XLSX.utils.book_new();
 
-  try {
-    for (let i = 0; i < images.length; i++) {
-      const portrait = images[i];
+  addDataSheet(
+    workbook,
+    rows,
+    'Submissions'
+  );
 
-      setProgress(`Downloading ${i + 1} / ${images.length}`);
+  addSummarySheet(
+    workbook,
+    rows,
+    'state'
+  );
 
-      const response = await fetch(portrait.generated_image_url);
+  addSummarySheet(
+    workbook,
+    rows,
+    'district'
+  );
 
-      if (!response.ok) {
-        throw new Error(`Failed to download image ${i + 1}`);
+  XLSX.writeFile(
+    workbook,
+    `${fileName}-${Date.now()}.xlsx`,
+    {
+      compression: true,
+    }
+  );
+}
+
+/* =========================================================
+   POSTER PREVIEW
+========================================================= */
+
+function PosterPreview({
+  imagePath,
+  name,
+}) {
+  const [imageUrl, setImageUrl] =
+    useState(null);
+
+  const [failed, setFailed] =
+    useState(false);
+
+  useEffect(() => {
+    let objectUrl = null;
+    let cancelled = false;
+
+    async function loadPoster() {
+      if (
+        !imagePath ||
+        !supabase
+      ) {
+        setFailed(true);
+        return;
       }
 
-      const blob = await response.blob();
+      setFailed(false);
+      setImageUrl(null);
 
-      const refNo = portrait.ref_no || `portrait-${i + 1}`;
-      folder.file(`${refNo}.jpg`, blob);
+      try {
+        const { data, error } =
+          await supabase.storage
+            .from(STORAGE_BUCKET)
+            .download(
+              imagePath
+            );
+
+        if (error) {
+          console.error(
+            'Poster preview failed:',
+            error
+          );
+
+          if (!cancelled) {
+            setFailed(true);
+          }
+
+          return;
+        }
+
+        if (!data) {
+          if (!cancelled) {
+            setFailed(true);
+          }
+
+          return;
+        }
+
+        objectUrl =
+          URL.createObjectURL(data);
+
+        if (!cancelled) {
+          setImageUrl(
+            objectUrl
+          );
+        }
+      } catch (error) {
+        console.error(
+          'Poster preview error:',
+          error
+        );
+
+        if (!cancelled) {
+          setFailed(true);
+        }
+      }
     }
 
-    setProgress('Creating ZIP...');
+    loadPoster();
 
-    const zipBlob = await zip.generateAsync({
-      type: 'blob',
-      compression: 'STORE',
-    });
+    return () => {
+      cancelled = true;
 
-    const url = URL.createObjectURL(zipBlob);
+      if (objectUrl) {
+        URL.revokeObjectURL(
+          objectUrl
+        );
+      }
+    };
+  }, [imagePath]);
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `crystal-diwali-generated-images-${Date.now()}.zip`;
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    URL.revokeObjectURL(url);
-
-    setProgress('');
-  } catch (error) {
-    console.error('Generated image export failed:', error);
-    setProgress('');
-    alert('Export failed. Please try again.');
+  if (failed) {
+    return (
+      <div className="admin-thumb placeholder">
+        <span>—</span>
+      </div>
+    );
   }
+
+  if (!imageUrl) {
+    return (
+      <div className="admin-thumb placeholder">
+        <span>Loading</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      className="admin-thumb"
+      src={imageUrl}
+      alt={`Poster for ${
+        name || 'user'
+      }`}
+      loading="lazy"
+    />
+  );
 }
-async function downloadPortrait(imageUrl, refNo, name) {
-  if (!imageUrl) return;
+
+/* =========================================================
+   SINGLE POSTER DOWNLOAD
+========================================================= */
+
+async function downloadPoster(
+  imagePath,
+  refNo,
+  name
+) {
+  if (!imagePath) {
+    alert(
+      'Poster is not available.'
+    );
+    return;
+  }
+
+  if (!supabase) {
+    alert(
+      'Supabase is not configured.'
+    );
+    return;
+  }
 
   try {
-    const response = await fetch(imageUrl);
+    const safeName =
+      (name || 'user')
+        .replace(
+          /[^a-z0-9]/gi,
+          '-'
+        )
+        .replace(
+          /-+/g,
+          '-'
+        )
+        .toLowerCase();
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch image');
+    const fileName =
+      `crystal-diwali-${
+        refNo || safeName
+      }.jpg`;
+
+    const { data, error } =
+      await supabase.storage
+        .from(STORAGE_BUCKET)
+        .download(
+          imagePath
+        );
+
+    if (error) {
+      throw error;
     }
 
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
+    if (!data) {
+      throw new Error(
+        'No poster data returned.'
+      );
+    }
 
-    const safeName = (name || 'user')
-      .replace(/[^a-z0-9]/gi, '-')
-      .replace(/-+/g, '-')
-      .toLowerCase();
+    const blobUrl =
+      URL.createObjectURL(data);
 
-    const fileName = `crystal-diwali-${refNo || safeName}.png`;
+    const link =
+      document.createElement('a');
 
-    const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName;
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    document.body.appendChild(
+      link
+    );
 
-    window.URL.revokeObjectURL(blobUrl);
+    link.click();
+
+    document.body.removeChild(
+      link
+    );
+
+    setTimeout(() => {
+      URL.revokeObjectURL(
+        blobUrl
+      );
+    }, 1000);
   } catch (error) {
-    console.error('Download failed:', error);
-    alert('Image download failed. Please try again.');
+    console.error(
+      'Poster download failed:',
+      error
+    );
+
+    alert(
+      'Poster download failed. Please try again.'
+    );
   }
 }
-function isToday(dateStr) {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  return d.toDateString() === now.toDateString();
+
+/* =========================================================
+   POSTER ZIP EXPORT
+========================================================= */
+
+async function downloadGeneratedImages(
+  rows,
+  setProgress
+) {
+  const images =
+    rows.filter(
+      (row) =>
+        row.generated_poster_path
+    );
+
+  if (!images.length) {
+    alert(
+      'No generated posters available.'
+    );
+    return;
+  }
+
+  if (!supabase) {
+    alert(
+      'Supabase is not configured.'
+    );
+    return;
+  }
+
+  const zip =
+    new JSZip();
+
+  const folder =
+    zip.folder(
+      'generated-posters'
+    );
+
+  try {
+    for (
+      let i = 0;
+      i < images.length;
+      i++
+    ) {
+      const row =
+        images[i];
+
+      setProgress(
+        `Downloading ${
+          i + 1
+        } / ${
+          images.length
+        }`
+      );
+
+      const { data, error } =
+        await supabase.storage
+          .from(
+            STORAGE_BUCKET
+          )
+          .download(
+            row.generated_poster_path
+          );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error(
+          `No data returned for poster ${
+            i + 1
+          }`
+        );
+      }
+
+      folder.file(
+        `${getRefNo(row)}.jpg`,
+        data
+      );
+    }
+
+    setProgress(
+      'Creating ZIP...'
+    );
+
+    const zipBlob =
+      await zip.generateAsync(
+        {
+          type: 'blob',
+          compression: 'STORE',
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        zipBlob
+      );
+
+    const link =
+      document.createElement(
+        'a'
+      );
+
+    link.href = url;
+
+    link.download =
+      `crystal-diwali-posters-${Date.now()}.zip`;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    document.body.removeChild(
+      link
+    );
+
+    setTimeout(() => {
+      URL.revokeObjectURL(
+        url
+      );
+    }, 1000);
+
+    setProgress('');
+  } catch (error) {
+    console.error(
+      'ZIP export failed:',
+      error
+    );
+
+    setProgress('');
+
+    alert(
+      'Poster export failed. Please try again.'
+    );
+  }
 }
 
-export default function Admin() {
-  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem(SESSION_KEY) === '1');
-  const [passcode, setPasscode] = useState('');
-  const [passError, setPassError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [registrations, setRegistrations] = useState([]);
-  const [portraits, setPortraits] = useState([]);
-  const [isMock, setIsMock] = useState(false);
-  const [exportingImages, setExportingImages] = useState(false);
-const [exportProgress, setExportProgress] = useState('');
+/* =========================================================
+   ADMIN
+========================================================= */
 
-  const [search, setSearch] = useState('');
-  const [stateFilter, setStateFilter] = useState('');
-  const [districtFilter, setDistrictFilter] = useState('');
-  const [langFilter, setLangFilter] = useState('');
-  const [productFilter, setProductFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const lang = 'en';
-  const tr = (key) => t(lang, key);
+export default function Admin() {
+  const [unlocked, setUnlocked] =
+    useState(
+      () =>
+        sessionStorage.getItem(
+          SESSION_KEY
+        ) === '1'
+    );
+
+  const [passcode, setPasscode] =
+    useState('');
+
+  const [passError, setPassError] =
+    useState('');
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [loadError, setLoadError] =
+    useState('');
+
+  const [submissions, setSubmissions] =
+    useState([]);
+
+  const [isMock, setIsMock] =
+    useState(false);
+
+  const [search, setSearch] =
+    useState('');
+
+  const [languageFilter, setLanguageFilter] =
+    useState('');
+
+  const [stateFilter, setStateFilter] =
+    useState('');
+
+  const [districtFilter, setDistrictFilter] =
+    useState('');
+
+  const [statusFilter, setStatusFilter] =
+    useState('');
+
+  const [page, setPage] =
+    useState(1);
+
+  const [exportingImages, setExportingImages] =
+    useState(false);
+
+  const [exportProgress, setExportProgress] =
+    useState('');
+
+  /* =======================================================
+     LOAD
+  ======================================================= */
 
   const load = async () => {
     setLoading(true);
     setLoadError('');
+
     try {
-      const data = await fetchAdminData();
-      setRegistrations(data.registrations);
-      setPortraits(data.portraits);
-      setIsMock(data.mock);
-    } catch {
-      setLoadError('Could not load dashboard data. Please check your connection and try again.');
+      const data =
+        await fetchAdminData();
+
+      setSubmissions(
+        data.submissions || []
+      );
+
+      setIsMock(
+        Boolean(data.mock)
+      );
+    } catch (error) {
+      console.error(
+        'Dashboard loading failed:',
+        error
+      );
+
+      setLoadError(
+        'Could not load dashboard data. Please check your connection and try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -174,294 +686,1007 @@ const [exportProgress, setExportProgress] = useState('');
 
   useEffect(() => {
     if (!unlocked) return;
+
     load();
-    const unsubscribe = subscribeToRealtimeUpdates(load);
+
+    const unsubscribe =
+      subscribeToRealtimeUpdates(
+        load
+      );
+
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
-  const handleUnlock = (e) => {
-    e.preventDefault();
-    if (passcode === ADMIN_PASSCODE) {
-      sessionStorage.setItem(SESSION_KEY, '1');
+  /* =======================================================
+     LOGIN
+  ======================================================= */
+
+  const handleUnlock = (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (
+      passcode ===
+      ADMIN_PASSCODE
+    ) {
+      sessionStorage.setItem(
+        SESSION_KEY,
+        '1'
+      );
+
       setUnlocked(true);
       setPassError('');
+      setPasscode('');
     } else {
-      setPassError(tr('adminWrongCode'));
+      setPassError(
+        'Incorrect admin password.'
+      );
     }
   };
 
   const handleLock = () => {
-    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(
+      SESSION_KEY
+    );
+
     setUnlocked(false);
+    setSubmissions([]);
   };
 
-  const portraitsByReg = useMemo(() => {
-    const map = new Map();
-    portraits.forEach((p) => map.set(p.registration_id, p));
-    return map;
-  }, [portraits]);
+  /* =======================================================
+     FILTER OPTIONS
+  ======================================================= */
 
-  const filtered = useMemo(() => {
-    return registrations.filter((r) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (!r.name?.toLowerCase().includes(q) && !r.mobile?.includes(q)) return false;
-      }
-      if (stateFilter && r.state !== stateFilter) return false;
-      if (districtFilter && r.district !== districtFilter) return false;
-      if (langFilter && r.language !== langFilter) return false;
-      if (productFilter === 'yes' && !r.used_crystal_products) return false;
-      if (productFilter === 'no' && r.used_crystal_products) return false;
-      return true;
-    });
-  }, [registrations, search, stateFilter, districtFilter, langFilter, productFilter]);
-
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-
-  const stats = useMemo(
-    () => ({
-      totalReg: registrations.length,
-      totalPortraits: portraits.length,
-      todayReg: registrations.filter((r) => isToday(r.created_at)).length,
-      todayPortraits: portraits.filter((p) => isToday(p.created_at)).length,
-    }),
-    [registrations, portraits]
+  const languages = useMemo(
+    () =>
+      [
+        ...new Set(
+          submissions
+            .map(
+              (item) =>
+                item.language
+            )
+            .filter(Boolean)
+        ),
+      ].sort(),
+    [submissions]
   );
 
-  const stateBreakdown = useMemo(() => {
-    const counts = {};
-    registrations.forEach((r) => {
-      counts[r.state] = (counts[r.state] || 0) + 1;
-    });
-    return Object.entries(counts)
-      .map(([code, count]) => ({ code, label: getStateLabel(code, 'en'), count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
-  }, [registrations]);
+  const states = useMemo(
+    () =>
+      [
+        ...new Set(
+          submissions
+            .map(
+              (item) =>
+                item.state
+            )
+            .filter(Boolean)
+        ),
+      ].sort(),
+    [submissions]
+  );
+
+  const districts = useMemo(
+    () => {
+      let rows =
+        submissions;
+
+      if (stateFilter) {
+        rows =
+          rows.filter(
+            (row) =>
+              row.state ===
+              stateFilter
+          );
+      }
+
+      return [
+        ...new Set(
+          rows
+            .map(
+              (item) =>
+                item.district ||
+                item.city
+            )
+            .filter(Boolean)
+        ),
+      ].sort();
+    },
+    [
+      submissions,
+      stateFilter,
+    ]
+  );
+
+  /* =======================================================
+     FILTERED DATA
+  ======================================================= */
+
+  const filtered =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
+
+      return submissions.filter(
+        (row) => {
+          if (query) {
+            const matches =
+              row.name
+                ?.toLowerCase()
+                .includes(query) ||
+              row.phone
+                ?.toLowerCase()
+                .includes(query) ||
+              row.state
+                ?.toLowerCase()
+                .includes(query) ||
+              row.district
+                ?.toLowerCase()
+                .includes(query) ||
+              row.city
+                ?.toLowerCase()
+                .includes(query) ||
+              getRefNo(row)
+                ?.toLowerCase()
+                .includes(query);
+
+            if (!matches) {
+              return false;
+            }
+          }
+
+          if (
+            languageFilter &&
+            row.language !==
+              languageFilter
+          ) {
+            return false;
+          }
+
+          if (
+            stateFilter &&
+            row.state !==
+              stateFilter
+          ) {
+            return false;
+          }
+
+          const rowDistrict =
+            row.district ||
+            row.city ||
+            '';
+
+          if (
+            districtFilter &&
+            rowDistrict !==
+              districtFilter
+          ) {
+            return false;
+          }
+
+          if (
+            statusFilter &&
+            row.status !==
+              statusFilter
+          ) {
+            return false;
+          }
+
+          return true;
+        }
+      );
+    }, [
+      submissions,
+      search,
+      languageFilter,
+      stateFilter,
+      districtFilter,
+      statusFilter,
+    ]);
+
+  /* =======================================================
+     PAGINATION
+  ======================================================= */
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filtered.length /
+          PAGE_SIZE
+      )
+    );
+
+  const safePage =
+    Math.min(
+      page,
+      totalPages
+    );
+
+  const paged =
+    filtered.slice(
+      (safePage - 1) *
+        PAGE_SIZE,
+      safePage *
+        PAGE_SIZE
+    );
+
+  /* =======================================================
+     STATS
+  ======================================================= */
+
+  const stats =
+    useMemo(() => {
+      return {
+        total:
+          submissions.length,
+
+        today:
+          submissions.filter(
+            (row) =>
+              isToday(
+                row.created_at
+              )
+          ).length,
+
+        completed:
+          submissions.filter(
+            (row) =>
+              row.status ===
+              'completed'
+          ).length,
+
+        states:
+          new Set(
+            submissions
+              .map(
+                (row) =>
+                  row.state
+              )
+              .filter(Boolean)
+          ).size,
+
+        districts:
+          new Set(
+            submissions
+              .map(
+                (row) =>
+                  row.district ||
+                  row.city
+              )
+              .filter(Boolean)
+          ).size,
+      };
+    }, [submissions]);
+
+  /* =======================================================
+     STATE BREAKDOWN
+  ======================================================= */
+
+  const stateBreakdown =
+    useMemo(() => {
+      const counts = {};
+
+      submissions.forEach(
+        (row) => {
+          const state =
+            row.state ||
+            'Unknown';
+
+          counts[state] =
+            (counts[state] ||
+              0) + 1;
+        }
+      );
+
+      return Object.entries(
+        counts
+      )
+        .map(
+          ([state, count]) => ({
+            state,
+            count,
+          })
+        )
+        .sort(
+          (a, b) =>
+            b.count -
+            a.count
+        )
+        .slice(0, 8);
+    }, [submissions]);
+
+  /* =======================================================
+     EXPORT CURRENT FILTER
+  ======================================================= */
+
+  const handleExcelExport =
+    () => {
+      exportExcel(
+        filtered,
+        'crystal-diwali-filtered'
+      );
+    };
+
+  const handleStateExport =
+    () => {
+      if (!stateFilter) {
+        alert(
+          'Please select a state first.'
+        );
+        return;
+      }
+
+      const rows =
+        submissions.filter(
+          (row) =>
+            row.state ===
+            stateFilter
+        );
+
+      exportExcel(
+        rows,
+        `crystal-diwali-${stateFilter}`
+      );
+    };
+
+  const handleDistrictExport =
+    () => {
+      if (!districtFilter) {
+        alert(
+          'Please select a district first.'
+        );
+        return;
+      }
+
+      const rows =
+        submissions.filter(
+          (row) => {
+            const district =
+              row.district ||
+              row.city ||
+              '';
+
+            return (
+              district ===
+              districtFilter
+            );
+          }
+        );
+
+      const safeDistrict =
+        districtFilter
+          .replace(
+            /[^a-z0-9]/gi,
+            '-'
+          )
+          .toLowerCase();
+
+      exportExcel(
+        rows,
+        `crystal-diwali-${safeDistrict}`
+      );
+    };
+
+  /* =======================================================
+     LOGIN SCREEN
+  ======================================================= */
 
   if (!unlocked) {
     return (
       <div className="admin-lock-screen">
-        <form className="admin-lock-card" onSubmit={handleUnlock}>
-          <h1>{tr('adminTitle')}</h1>
-          <p>{tr('adminLocked')}</p>
+        <form
+          className="admin-lock-card"
+          onSubmit={
+            handleUnlock
+          }
+        >
+          <h1>
+            Campaign Dashboard
+          </h1>
+
+          <p>
+            Enter the admin password
+            to continue.
+          </p>
+
           <input
             type="password"
             value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            placeholder={tr('adminPasscodePh')}
+            onChange={(event) =>
+              setPasscode(
+                event.target.value
+              )
+            }
+            placeholder="Admin password"
             autoFocus
           />
-          {passError && <p className="field-error">{passError}</p>}
-          <button type="submit" className="primary-btn">
-            {tr('adminUnlock')}
+
+          {passError && (
+            <p className="field-error">
+              {passError}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="primary-btn"
+          >
+            Unlock Dashboard
           </button>
         </form>
       </div>
     );
   }
 
+  /* =======================================================
+     DASHBOARD
+  ======================================================= */
+
   return (
     <div className="admin-page">
+
+      {/* HEADER */}
+
       <header className="admin-header">
-        <h1>{tr('adminTitle')}</h1>
+        <div>
+          <h1>
+            Campaign Dashboard
+          </h1>
+
+          <p>
+            Diwali Campaign
+            Submissions
+          </p>
+        </div>
+
         <div className="admin-header-actions">
-          {isMock && <span className="mock-badge">Local demo data (Supabase not connected)</span>}
-          <button type="button" className="text-btn" onClick={handleLock}>
-            {tr('logout')}
+          {isMock && (
+            <span className="mock-badge">
+              Local demo data
+            </span>
+          )}
+
+          <button
+            type="button"
+            className="text-btn"
+            onClick={
+              handleLock
+            }
+          >
+            Logout
           </button>
         </div>
       </header>
 
-      {loadError && <p className="field-error center">{loadError}</p>}
+      {/* ERROR */}
+
+      {loadError && (
+        <p className="field-error center">
+          {loadError}
+        </p>
+      )}
+
+      {/* STATS */}
 
       <section className="stat-grid">
+
         <div className="stat-card">
-          <span className="stat-value">{stats.totalReg}</span>
-          <span className="stat-label">{tr('totalReg')}</span>
+          <span className="stat-value">
+            {stats.total}
+          </span>
+
+          <span className="stat-label">
+            Total Submissions
+          </span>
         </div>
+
         <div className="stat-card">
-          <span className="stat-value">{stats.totalPortraits}</span>
-          <span className="stat-label">{tr('totalPortraits')}</span>
+          <span className="stat-value">
+            {stats.today}
+          </span>
+
+          <span className="stat-label">
+            Today's Submissions
+          </span>
         </div>
+
         <div className="stat-card">
-          <span className="stat-value">{stats.todayReg}</span>
-          <span className="stat-label">{tr('todayReg')}</span>
+          <span className="stat-value">
+            {stats.completed}
+          </span>
+
+          <span className="stat-label">
+            Completed Posters
+          </span>
         </div>
+
         <div className="stat-card">
-          <span className="stat-value">{stats.todayPortraits}</span>
-          <span className="stat-label">{tr('todayPortraits')}</span>
+          <span className="stat-value">
+            {stats.states}
+          </span>
+
+          <span className="stat-label">
+            States
+          </span>
         </div>
+
+        <div className="stat-card">
+          <span className="stat-value">
+            {stats.districts}
+          </span>
+
+          <span className="stat-label">
+            Districts
+          </span>
+        </div>
+
       </section>
+
+      {/* STATE BREAKDOWN */}
 
       {stateBreakdown.length > 0 && (
         <section className="state-breakdown">
-          {stateBreakdown.map((s) => (
-            <div key={s.code} className="state-bar-row">
-              <span className="state-bar-label">{s.label}</span>
-              <div className="state-bar-track">
-                <div
-                  className="state-bar-fill"
-                  style={{ width: `${(s.count / stateBreakdown[0].count) * 100}%` }}
-                />
+
+          {stateBreakdown.map(
+            (item) => (
+              <div
+                key={
+                  item.state
+                }
+                className="state-bar-row"
+              >
+                <span className="state-bar-label">
+                  {item.state}
+                </span>
+
+                <div className="state-bar-track">
+                  <div
+                    className="state-bar-fill"
+                    style={{
+                      width: `${
+                        (item.count /
+                          stateBreakdown[0]
+                            .count) *
+                        100
+                      }%`,
+                    }}
+                  />
+                </div>
+
+                <span className="state-bar-count">
+                  {item.count}
+                </span>
               </div>
-              <span className="state-bar-count">{s.count}</span>
-            </div>
-          ))}
+            )
+          )}
+
         </section>
       )}
 
+      {/* TOOLBAR */}
+
       <section className="admin-toolbar">
+
         <input
           type="search"
-          placeholder={tr('searchPh')}
+          placeholder="Search name, mobile, state, district or ref..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(event) => {
+            setSearch(
+              event.target.value
+            );
+
             setPage(1);
           }}
         />
-        <select value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setDistrictFilter(''); setPage(1); }}>
-          <option value="">{tr('allStates')}</option>
-          {getStateOptions('en').map((s) => (
-            <option key={s.code} value={s.code}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <select value={langFilter} onChange={(e) => { setLangFilter(e.target.value); setPage(1); }}>
-          <option value="">{tr('allLanguages')}</option>
-          {LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-        <select value={productFilter} onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}>
-          <option value="">{tr('allProducts')}</option>
-          <option value="yes">{tr('yes')}</option>
-          <option value="no">{tr('no')}</option>
-        </select>
-        <button type="button" className="secondary-btn" onClick={() => downloadCsv(filtered)}>
-          {tr('exportCsv')}
-        </button>
-        <button
-  type="button"
-  className="secondary-btn"
-  disabled={exportingImages}
-  onClick={async () => {
-    setExportingImages(true);
 
-    try {
-      await downloadGeneratedImages(
-        portraits,
-        setExportProgress
-      );
-    } finally {
-      setExportingImages(false);
-    }
-  }}
->
-  {exportingImages ? exportProgress || 'Exporting...' : 'Export Generated Images'}
-</button>
-      </section>
+        {/* LANGUAGE */}
 
-      <section className="admin-table-wrap">
-        {loading ? (
-          <p className="admin-loading">Loading…</p>
-        ) : paged.length === 0 ? (
-          <p className="admin-loading">{tr('noResults')}</p>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Portrait</th>
-                <th>Name</th>
-                <th>Mobile</th>
-                <th>State / District</th>
-                <th>Used before</th>
-                <th>Lang</th>
-                <th>Ref No</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map((r) => {
-                const portrait = portraitsByReg.get(r.id);
-                return (
-<tr key={r.id}>
-  <td>
-    {portrait?.generated_image_url ? (
-      <div className="portrait-cell">
-        <img
-          className="admin-thumb"
-          src={portrait.generated_image_url}
-          alt="Generated portrait"
-        />
+        <select
+          value={languageFilter}
+          onChange={(event) => {
+            setLanguageFilter(
+              event.target.value
+            );
+
+            setPage(1);
+          }}
+        >
+          <option value="">
+            All Languages
+          </option>
+
+          {languages.map(
+            (language) => (
+              <option
+                key={language}
+                value={language}
+              >
+                {language}
+              </option>
+            )
+          )}
+        </select>
+
+        {/* STATE */}
+
+        <select
+          value={stateFilter}
+          onChange={(event) => {
+            setStateFilter(
+              event.target.value
+            );
+
+            setDistrictFilter('');
+            setPage(1);
+          }}
+        >
+          <option value="">
+            All States
+          </option>
+
+          {states.map(
+            (state) => (
+              <option
+                key={state}
+                value={state}
+              >
+                {state}
+              </option>
+            )
+          )}
+        </select>
+
+        {/* DISTRICT */}
+
+        <select
+          value={districtFilter}
+          onChange={(event) => {
+            setDistrictFilter(
+              event.target.value
+            );
+
+            setPage(1);
+          }}
+        >
+          <option value="">
+            All Districts
+          </option>
+
+          {districts.map(
+            (district) => (
+              <option
+                key={district}
+                value={district}
+              >
+                {district}
+              </option>
+            )
+          )}
+        </select>
+
+        {/* STATUS */}
+
+        <select
+          value={statusFilter}
+          onChange={(event) => {
+            setStatusFilter(
+              event.target.value
+            );
+
+            setPage(1);
+          }}
+        >
+          <option value="">
+            All Status
+          </option>
+
+          <option value="completed">
+            Completed
+          </option>
+        </select>
+
+        {/* EXCEL */}
 
         <button
           type="button"
-          className="download-btn"
-          onClick={() =>
-            downloadPortrait(
-              portrait.generated_image_url,
-              portrait.ref_no,
-              r.name
-            )
+          className="secondary-btn"
+          onClick={
+            handleExcelExport
           }
         >
-          Download
+          📊 Export Excel
         </button>
-      </div>
-    ) : (
-      <span className="admin-thumb placeholder" />
-    )}
-  </td>
 
-  <td>{r.name}</td>
+        {/* STATE EXCEL */}
 
-  <td>{r.mobile}</td>
+        <button
+          type="button"
+          className="secondary-btn"
+          disabled={!stateFilter}
+          onClick={
+            handleStateExport
+          }
+        >
+          📍 State Excel
+        </button>
 
-  <td>
-    {r.district}, {getStateLabel(r.state, 'en')}
-  </td>
+        {/* DISTRICT EXCEL */}
 
-  <td>
-    {r.used_crystal_products ? tr('yes') : tr('no')}
-  </td>
+        <button
+          type="button"
+          className="secondary-btn"
+          disabled={!districtFilter}
+          onClick={
+            handleDistrictExport
+          }
+        >
+          📍 District Excel
+        </button>
 
-  <td>{r.language}</td>
+        {/* POSTER ZIP */}
 
-  <td>{portrait?.ref_no || '—'}</td>
+        <button
+          type="button"
+          className="secondary-btn"
+          disabled={
+            exportingImages
+          }
+          onClick={async () => {
+            setExportingImages(
+              true
+            );
 
-  <td>
-    {r.created_at
-      ? new Date(r.created_at).toLocaleString()
-      : '—'}
-  </td>
-</tr>
-                );
-              })}
+            try {
+              await downloadGeneratedImages(
+                filtered,
+                setExportProgress
+              );
+            } finally {
+              setExportingImages(
+                false
+              );
+            }
+          }}
+        >
+          {exportingImages
+            ? exportProgress ||
+              'Exporting...'
+            : 'Export Posters ZIP'}
+        </button>
+
+      </section>
+
+      {/* TABLE */}
+
+      <section className="admin-table-wrap">
+
+        {loading ? (
+          <p className="admin-loading">
+            Loading submissions…
+          </p>
+        ) : paged.length === 0 ? (
+          <p className="admin-loading">
+            No submissions found.
+          </p>
+        ) : (
+          <table className="admin-table">
+
+            <thead>
+              <tr>
+                <th>
+                  Poster
+                </th>
+
+                <th>
+                  Name
+                </th>
+
+                <th>
+                  Mobile
+                </th>
+
+                <th>
+                  State
+                </th>
+
+                <th>
+                  District
+                </th>
+
+                <th>
+                  Language
+                </th>
+
+                <th>
+                  Ref No
+                </th>
+
+                <th>
+                  Status
+                </th>
+
+                <th>
+                  Created
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {paged.map(
+                (row) => {
+                  const refNo =
+                    getRefNo(
+                      row
+                    );
+
+                  return (
+                    <tr
+                      key={
+                        row.id
+                      }
+                    >
+
+                      {/* POSTER */}
+
+                      <td>
+                        {row.generated_poster_path ? (
+                          <div className="portrait-cell">
+
+                            <PosterPreview
+                              imagePath={
+                                row.generated_poster_path
+                              }
+                              name={
+                                row.name
+                              }
+                            />
+
+                            <button
+                              type="button"
+                              className="download-btn"
+                              onClick={() =>
+                                downloadPoster(
+                                  row.generated_poster_path,
+                                  refNo,
+                                  row.name
+                                )
+                              }
+                            >
+                              Download
+                            </button>
+
+                          </div>
+                        ) : (
+                          <span className="admin-thumb placeholder" />
+                        )}
+                      </td>
+
+                      {/* NAME */}
+
+                      <td>
+                        {row.name ||
+                          '—'}
+                      </td>
+
+                      {/* MOBILE */}
+
+                      <td>
+                        {row.phone ||
+                          '—'}
+                      </td>
+
+                      {/* STATE */}
+
+                      <td>
+                        {row.state ||
+                          '—'}
+                      </td>
+
+                      {/* DISTRICT */}
+
+                      <td>
+                        {row.district ||
+                          row.city ||
+                          '—'}
+                      </td>
+
+                      {/* LANGUAGE */}
+
+                      <td>
+                        {row.language ||
+                          '—'}
+                      </td>
+
+                      {/* REF */}
+
+                      <td>
+                        {refNo}
+                      </td>
+
+                      {/* STATUS */}
+
+                      <td>
+                        {row.status ||
+                          '—'}
+                      </td>
+
+                      {/* CREATED */}
+
+                      <td>
+                        {formatDate(
+                          row.created_at
+                        )}
+                      </td>
+
+                    </tr>
+                  );
+                }
+              )}
+
             </tbody>
+
           </table>
         )}
+
       </section>
+
+      {/* PAGINATION */}
 
       {totalPages > 1 && (
         <div className="pagination">
-          <button type="button" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+
+          <button
+            type="button"
+            disabled={
+              safePage === 1
+            }
+            onClick={() =>
+              setPage(
+                (current) =>
+                  Math.max(
+                    1,
+                    current - 1
+                  )
+              )
+            }
+          >
             ‹ Prev
           </button>
+
           <span>
-            {page} / {totalPages}
+            {safePage} /{' '}
+            {totalPages}
           </span>
-          <button type="button" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
+
+          <button
+            type="button"
+            disabled={
+              safePage ===
+              totalPages
+            }
+            onClick={() =>
+              setPage(
+                (current) =>
+                  Math.min(
+                    totalPages,
+                    current + 1
+                  )
+              )
+            }
+          >
             Next ›
           </button>
+
         </div>
       )}
+
     </div>
   );
 }
