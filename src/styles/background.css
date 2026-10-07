@@ -1,0 +1,17 @@
+/* Background image for the whole page. Replace public/bg.jpg with your own
+   image (any size, ~1920x1080 or larger, JPG/WebP). Nothing else changes. */
+.page {
+  position: relative;
+  isolation: isolate;
+}
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(20, 8, 13, 0.30) 0%, rgba(20, 8, 13, 0.48) 55%, rgba(16, 7, 12, 0.70) 100%),
+    url('/bg.jpg') center / cover no-repeat,
+    #1b0b12;
+}

@@ -13,10 +13,10 @@ export const LANGUAGES = [
 export const translations = {
   en: {
     studioLabel: 'Festive Selfie Studio',
-    campaignTag: 'Crystal® JIVORA · Cotton season',
-    fromCrystal: 'From the Crystal family to yours',
-    headline: 'we will update it later ',
-    subheadline: 'Add one clear photo and get your festive portrait — your face stays exactly as it is, ready to download or share.',
+    campaignTag: 'Crystal® JIVORA · Festive Celebration',
+    fromCrystal: 'A festive moment from the Crystal® family to yours.',
+    headline: 'Create Your Crystal® Festive Portrait',
+    subheadline: 'Add your photo and create a personalized festive portrait in just a few simple steps.',
     liveCount: 'people have already created their festive portrait',
     stepLabel: 'Step 1 · Takes less than a minute',
     yourPortrait: 'Your portrait',
@@ -762,3 +762,102 @@ export const translations = {
 export function t(lang, key) {
   return (translations[lang] && translations[lang][key]) || translations.en[key] || key;
 }
+
+
+// Submit button text (sirf en + hi)
+Object.assign(translations.en, { submit: 'Create my KGR-T Selfie', submitting: 'Creating your selfie…' });
+Object.assign(translations.hi, { submit: 'मेरी KGR-T Selfie बनाएं', submitting: 'आपकी Selfie बन रही है…' });
+
+const hero = (studio, headline, intro, stepsTitle, s1, s2, s3) => ({
+  studioLabel: studio,
+  campaignTag: ' ',
+  fromCrystal: ' ',
+  headline,
+  subheadline: `${intro}\n\n${stepsTitle}\n1. ${s1}\n2. ${s2}\n3. ${s3}`,
+});
+
+const heroText = {
+  en: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'I am a KGR Farmer\nNew Technology, New Identity',
+    'Create your KGR-T Selfie and share your identity with the world.',
+    'Just 3 Easy Steps',
+    'Take your selfie with the KGR-T frame',
+    'Download the KGR-T selfie frame',
+    'Update your status on WhatsApp or other Social Media'
+  ),
+  hi: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'मैं हूँ KGR किसान\nनई तकनीक, नई पहचान',
+    'अपनी KGR-T Selfie बनाइए और अपनी पहचान दुनिया के साथ साझा कीजिए ।',
+    'बस 3 आसान स्टेप्स',
+    'अपनी Selfie KGR-T frame के साथ लें',
+    'KGR-T selfie frame download करें',
+    'WhatsApp या अन्य Social Media पेज पर स्टेटस अपडेट करें'
+  ),
+  mr: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'मी KGR शेतकरी आहे\nनवे तंत्रज्ञान, नवी ओळख',
+    'तुमची KGR-T Selfie बनवा आणि तुमची ओळख जगासोबत शेअर करा.',
+    'फक्त 3 सोपे स्टेप्स',
+    'KGR-T frame सोबत तुमची Selfie घ्या',
+    'KGR-T selfie frame डाउनलोड करा',
+    'WhatsApp किंवा इतर Social Media पेजवर स्टेटस अपडेट करा'
+  ),
+  pa: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'ਮੈਂ ਹਾਂ KGR ਕਿਸਾਨ\nਨਵੀਂ ਤਕਨੀਕ, ਨਵੀਂ ਪਛਾਣ',
+    'ਆਪਣੀ KGR-T Selfie ਬਣਾਓ ਅਤੇ ਆਪਣੀ ਪਛਾਣ ਦੁਨੀਆ ਨਾਲ ਸਾਂਝੀ ਕਰੋ।',
+    'ਬੱਸ 3 ਆਸਾਨ ਸਟੈਪ',
+    'KGR-T frame ਨਾਲ ਆਪਣੀ Selfie ਲਓ',
+    'KGR-T selfie frame ਡਾਊਨਲੋਡ ਕਰੋ',
+    'WhatsApp ਜਾਂ ਹੋਰ Social Media ਪੇਜ ਤੇ ਸਟੇਟਸ ਅਪਡੇਟ ਕਰੋ'
+  ),
+  gu: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'હું છું KGR ખેડૂત\nનવી ટેકનોલોજી, નવી ઓળખ',
+    'તમારી KGR-T Selfie બનાવો અને તમારી ઓળખ દુનિયા સાથે શેર કરો.',
+    'બસ 3 સરળ સ્ટેપ્સ',
+    'KGR-T frame સાથે તમારી Selfie લો',
+    'KGR-T selfie frame ડાઉનલોડ કરો',
+    'WhatsApp અથવા અન્ય Social Media પેજ પર સ્ટેટસ અપડેટ કરો'
+  ),
+  ta: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'நான் KGR விவசாயி\nபுதிய தொழில்நுட்பம், புதிய அடையாளம்',
+    'உங்கள் KGR-T Selfie-யை உருவாக்கி உங்கள் அடையாளத்தை உலகத்துடன் பகிருங்கள்.',
+    'வெறும் 3 எளிய படிகள்',
+    'KGR-T frame உடன் உங்கள் Selfie எடுங்கள்',
+    'KGR-T selfie frame-ஐ பதிவிறக்கம் செய்யுங்கள்',
+    'WhatsApp அல்லது பிற Social Media பக்கத்தில் ஸ்டேட்டஸ் புதுப்பிக்கவும்'
+  ),
+  te: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'నేను KGR రైతును\nకొత్త సాంకేతికత, కొత్త గుర్తింపు',
+    'మీ KGR-T Selfie తీసుకుని మీ గుర్తింపును ప్రపంచంతో పంచుకోండి.',
+    'కేవలం 3 సులభమైన స్టెప్స్',
+    'KGR-T frame తో మీ Selfie తీసుకోండి',
+    'KGR-T selfie frame డౌన్‌లోడ్ చేయండి',
+    'WhatsApp లేదా ఇతర Social Media పేజీలో స్టేటస్ అప్‌డేట్ చేయండి'
+  ),
+  kn: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'ನಾನು KGR ರೈತ\nಹೊಸ ತಂತ್ರಜ್ಞಾನ, ಹೊಸ ಗುರುತು',
+    'ನಿಮ್ಮ KGR-T Selfie ಮಾಡಿ ಮತ್ತು ನಿಮ್ಮ ಗುರುತನ್ನು ಜಗತ್ತಿನೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಿ.',
+    'ಕೇವಲ 3 ಸುಲಭ ಹಂತಗಳು',
+    'KGR-T frame ಜೊತೆ ನಿಮ್ಮ Selfie ತೆಗೆಯಿರಿ',
+    'KGR-T selfie frame ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ',
+    'WhatsApp ಅಥವಾ ಇತರ Social Media ಪೇಜ್‌ನಲ್ಲಿ ಸ್ಟೇಟಸ್ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ'
+  ),
+  ml: hero(
+    'CRYSTAL SELFIE STUDIO',
+    'ഞാൻ KGR കർഷകൻ\nപുതിയ സാങ്കേതികവിദ്യ, പുതിയ വ്യക്തിത്വം',
+    'നിങ്ങളുടെ KGR-T Selfie എടുത്ത് നിങ്ങളുടെ വ്യക്തിത്വം ലോകവുമായി പങ്കിടൂ.',
+    'വെറും 3 എളുപ്പ സ്റ്റെപ്പുകൾ',
+    'KGR-T frame ഉപയോഗിച്ച് നിങ്ങളുടെ Selfie എടുക്കുക',
+    'KGR-T selfie frame ഡൗൺലോഡ് ചെയ്യുക',
+    'WhatsApp അല്ലെങ്കിൽ മറ്റ് Social Media പേജിൽ സ്റ്റാറ്റസ് അപ്ഡേറ്റ് ചെയ്യുക'
+  ),
+};
+
+Object.keys(heroText).forEach((l) => Object.assign(translations[l], heroText[l]));

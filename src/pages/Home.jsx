@@ -7,7 +7,6 @@ import PhotoEditor, { DEFAULT_TRANSFORM } from '../components/PhotoEditor.jsx';
 import PortraitTemplate from '../components/PortraitTemplate.jsx';
 import LiveCounter from '../components/LiveCounter.jsx';
 import ResultModal from '../components/ResultModal.jsx';
-
 import { t } from '../data/translations.js';
 import { getStateLabel } from '../data/indiaLocations.js';
 import { validateForm, isFormValid } from '../utils/validation.js';
@@ -315,6 +314,13 @@ await saveSubmission({
       }
     };
   }, [result?.imageUrl]);
+  const [introText, stepsBlock = ''] = tr('subheadline').split('\n\n');
+const stepLines = stepsBlock.split('\n');
+const stepsTitle = stepLines[0];
+const stepItems = stepLines
+  .slice(1)
+  .map((l) => l.replace(/^\d+\.\s*/, ''));
+const stepIcons = ['📸', '⬇️', '📲'];
 
   return (
     <div className="page">
@@ -337,9 +343,22 @@ await saveSubmission({
             {tr('headline')}
           </h1>
 
-          <p className="subhead">
-            {tr('subheadline')}
-          </p>
+<p className="subhead">{introText}</p>
+
+{stepItems.length > 0 && (
+  <div className="how-steps">
+    <p className="how-title">{stepsTitle}</p>
+    <ul className="how-list">
+      {stepItems.map((text, i) => (
+        <li key={i} className="how-item">
+          <span className="how-icon">{stepIcons[i]}</span>
+          <span className="how-num">{i + 1}</span>
+          <span className="how-text">{text}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
 
           <LiveCounter lang={lang} />
 
