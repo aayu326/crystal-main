@@ -12,7 +12,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     // eslint-disable-next-line no-console
-    console.error('Crystal Diwali app crashed:', error, info);
+    console.error('Crystal kgr-t app crashed:', error, info);
   }
 
   render() {

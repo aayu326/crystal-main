@@ -286,7 +286,7 @@ function drawHeadline(ctx, w, h, lang) {
   ctx.fillText(t(lang, 'fromCrystal'), w / 2, h * 0.163);
 
   ctx.fillStyle = '#fdfaf3';
-  const text = t(lang, 'diwaliWish');
+  const text = t(lang, 'kgr-tWish');
   let size = scaleFont(60, w);
   ctx.font = `700 ${size}px ${serif}`;
   let lines = wrapLines(ctx, text, maxW);
@@ -434,13 +434,13 @@ function drawNameBadge(ctx, frame, w, name, districtState, lang) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
   const nameText = truncate(name || '', 22);
-  fitFont(ctx, nameText, innerW, 30, 700, sans, w);
+ fitFont(ctx, nameText, innerW, 38, 700, sans, w);
   ctx.fillText(nameText, frame.cx, badgeY + badgeH * (hasSub ? 0.36 : 0.5));
 
   if (hasSub) {
     const subText = truncate(districtState, 34);
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    fitFont(ctx, subText, innerW, 20, 500, sans, w);
+    fitFont(ctx, subText, innerW, 26, 500, sans, w);
     ctx.fillText(subText, frame.cx, badgeY + badgeH * 0.72);
   }
   ctx.restore();

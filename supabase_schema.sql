@@ -1,4 +1,4 @@
--- Crystal Diwali Selfie Campaign — Supabase schema
+-- Crystal kgr-t Selfie Campaign — Supabase schema
 -- Run this in the Supabase SQL editor (or via `supabase db push`).
 
 create extension if not exists "pgcrypto";
@@ -31,7 +31,7 @@ create table if not exists public.portraits (
   ref_no text not null unique,
   original_photo_url text,
   generated_image_url text,
-  template_id text not null default 'diwali-jivora-2026',
+  template_id text not null default 'kgr-t-jivora-2026',
   created_at timestamptz not null default now()
 );
 

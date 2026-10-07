@@ -50,7 +50,7 @@ export async function generateReferenceNumber() {
   return `${PREFIX}-${Date.now().toString(36).toUpperCase()}`;
 }
 
-const LOCAL_KEY = 'crystal_diwali_ref_history';
+const LOCAL_KEY = 'crystal_kgr-t_ref_history';
 
 function getLocalRefHistory() {
   try {

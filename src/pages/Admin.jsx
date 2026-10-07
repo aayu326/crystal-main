@@ -12,7 +12,7 @@ const ADMIN_PASSCODE =
   import.meta.env.VITE_ADMIN_PASSCODE || 'crystal2026';
 
 const SESSION_KEY =
-  'crystal_diwali_admin_unlocked';
+  'crystal_kgr-t_admin_unlocked';
 
 const PAGE_SIZE = 15;
 
@@ -205,7 +205,7 @@ function addSummarySheet(
 
 function exportExcel(
   rows,
-  fileName = 'crystal-diwali-submissions'
+  fileName = 'crystal-kgr-t-submissions'
 ) {
   if (!rows.length) {
     alert(
@@ -401,7 +401,7 @@ async function downloadPoster(
         .toLowerCase();
 
     const fileName =
-      `crystal-diwali-${
+      `crystal-kgr-t-${
         refNo || safeName
       }.jpg`;
 
@@ -563,7 +563,7 @@ async function downloadGeneratedImages(
     link.href = url;
 
     link.download =
-      `crystal-diwali-posters-${Date.now()}.zip`;
+      `crystal-kgr-t-posters-${Date.now()}.zip`;
 
     document.body.appendChild(
       link
@@ -1008,7 +1008,7 @@ export default function Admin() {
     () => {
       exportExcel(
         filtered,
-        'crystal-diwali-filtered'
+        'crystal-kgr-t-filtered'
       );
     };
 
@@ -1030,7 +1030,7 @@ export default function Admin() {
 
       exportExcel(
         rows,
-        `crystal-diwali-${stateFilter}`
+        `crystal-kgr-t-${stateFilter}`
       );
     };
 
@@ -1068,7 +1068,7 @@ export default function Admin() {
 
       exportExcel(
         rows,
-        `crystal-diwali-${safeDistrict}`
+        `crystal-kgr-t-${safeDistrict}`
       );
     };
 
@@ -1139,7 +1139,7 @@ export default function Admin() {
           </h1>
 
           <p>
-            Diwali Campaign
+            kgr-t Campaign
             Submissions
           </p>
         </div>

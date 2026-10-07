@@ -19,7 +19,7 @@ export const supabase = isSupabaseConfigured
 // Local-storage mock backend
 // ---------------------------------------------------------------------------
 
-const LS_SUBMISSIONS = 'crystal_diwali_submissions';
+const LS_SUBMISSIONS = 'crystal_kgr-t_submissions';
 
 function readLocal(key) {
   try {

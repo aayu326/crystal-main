@@ -1,8 +1,15 @@
 import { t } from '../data/translations.js';
 
-export default function ResultModal({ lang, name, refNo, imageUrl, onClose, onMakeAnother }) {
+export default function ResultModal({
+  lang,
+  name,
+  refNo,
+  imageUrl,
+  onClose,
+  onMakeAnother,
+}) {
   const tr = (key) => t(lang, key);
-  const fileName = `Crystal-Diwali-${refNo}.png`;
+  const fileName = `Crystal-KGR-T-${refNo}.png`;
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -18,50 +25,96 @@ export default function ResultModal({ lang, name, refNo, imageUrl, onClose, onMa
       if (navigator.canShare && imageUrl.startsWith('blob:')) {
         const res = await fetch(imageUrl);
         const blob = await res.blob();
-        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+
+        const file = new File(
+          [blob],
+          fileName,
+          { type: blob.type || 'image/png' }
+        );
+
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Happy Diwali', text: tr('resultReady') });
+          await navigator.share({
+            files: [file],
+            title: 'My KGR-T Selfie',
+          });
           return;
         }
       }
     } catch {
-      // fall through to WhatsApp link fallback
+      // Fall through to WhatsApp link fallback
     }
-    const waText = encodeURIComponent(`${tr('thankYou')}! ${tr('resultReady')}`);
-    window.open(`https://wa.me/?text=${waText}`, '_blank', 'noopener');
+
+    const waText = encodeURIComponent(
+      tr('thankYou')
+    );
+
+    window.open(
+      `https://wa.me/?text=${waText}`,
+      '_blank',
+      'noopener'
+    );
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
+    <div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="modal-panel">
-        <button type="button" className="modal-close" onClick={onClose} aria-label={tr('close')}>
+
+        <button
+          type="button"
+          className="modal-close"
+          onClick={onClose}
+          aria-label={tr('close')}
+        >
           ×
         </button>
+
         <div className="modal-check">✓</div>
+
         <h2>
           {tr('thankYou')}, {name}!
         </h2>
-        <p className="modal-copy">{tr('resultReady')}</p>
 
         <div className="modal-image-frame">
-          <img src={imageUrl} alt="Generated festive portrait" />
+          <img
+            src={imageUrl}
+            alt="Generated KGR-T selfie"
+          />
         </div>
+
         <p className="ref-no">
           {tr('refNo')} <strong>{refNo}</strong>
         </p>
 
         <div className="modal-actions">
-          <button type="button" className="primary-btn success" onClick={handleDownload}>
+          <button
+            type="button"
+            className="primary-btn success"
+            onClick={handleDownload}
+          >
             ⬇ {tr('download')}
           </button>
-          <button type="button" className="primary-btn whatsapp" onClick={handleShare}>
+
+          <button
+            type="button"
+            className="primary-btn whatsapp"
+            onClick={handleShare}
+          >
             ↗ {tr('share')}
           </button>
         </div>
 
-        <button type="button" className="text-btn" onClick={onMakeAnother}>
+        <button
+          type="button"
+          className="text-btn"
+          onClick={onMakeAnother}
+        >
           {tr('makeAnother')}
         </button>
+
       </div>
     </div>
   );

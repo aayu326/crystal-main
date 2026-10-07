@@ -1,7 +1,7 @@
-# Crystal® Diwali Festive Selfie Studio
+# Crystal® kgr-t Festive Selfie Studio
 
 A production-ready React + Vite campaign site: visitors register, add a selfie,
-fit it into a festive Diwali portrait frame, and download/share the result.
+fit it into a festive kgr-t portrait frame, and download/share the result.
 Built for Crystal® / JIVORA®, but the template, branding text and colours are
 kept in a few clearly separated files so they're easy to swap for another
 campaign.

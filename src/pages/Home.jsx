@@ -206,7 +206,7 @@ await saveSubmission({
   city: values.district,
 
   language: lang,
-  template_id: 'diwali-jivora-2026',
+  template_id: 'kgr-t-jivora-2026',
 
   generated_poster_path: posterPath,
   poster_url: posterUrl,
