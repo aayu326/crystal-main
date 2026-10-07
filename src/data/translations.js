@@ -51,7 +51,7 @@ export const translations = {
     privacyNote: 'Your photo stays private and is deleted after 90 days.',
     footerLine: 'Crystal® — Quality, Trust and Innovation',
     thankYou: 'Thank you',
-    resultReady: ' will update it later',
+    resultReady: 'I’ve generated my poster! 🎉 You can also create your own poster by clicking the link below.\nhttps://crystal-main-self.vercel.app',
     refNo: 'Ref. no.',
     download: 'Download',
     share: 'Share',
