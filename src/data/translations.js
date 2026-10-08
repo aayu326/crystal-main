@@ -788,7 +788,7 @@ const heroText = {
     'CRYSTAL SELFIE STUDIO',
     'I am a KGR Farmer\nNew Technology, New Identity',
     'Create your KGR-T Selfie and share your identity with the world.',
-    'Just 3 Easy Ways',
+    'Just 3 Easy Steps',
     'Take your selfie with the KGR-T frame',
     'Download the KGR-T selfie frame',
     'Update your status on WhatsApp or other Social Media'
